@@ -17,22 +17,24 @@ class ExitGRPCCallWithCode(Exception):
         super().__init__()
 
 
-def catch_exceptions(func: GRPCService, logger: Logger = None) -> GRPCService:
-    def wrapper(instance, req: Message, ctx: Context) -> Message:
-        try:
-            res = func(instance, req, ctx)
-            return res
+def catch_exceptions(logger: Logger = None):
+    def decorator_func(func: GRPCService) -> GRPCService:
+        def wrapper(instance, req: Message, ctx: Context) -> Message:
+            try:
+                res = func(instance, req, ctx)
+                return res
 
-        except ExitGRPCCallWithCode:
-            return Message()
+            except ExitGRPCCallWithCode:
+                return Message()
 
-        except Exception as e:
-            if logger is not None:
-                logger.error(e)
+            except Exception as e:
+                if logger is not None:
+                    logger.error(e)
 
-            ctx.set_code(grpc.StatusCode.INTERNAL)
-            ctx.set_details("Unknown error happened during processing request.")
+                ctx.set_code(grpc.StatusCode.INTERNAL)
+                ctx.set_details("Unknown error happened during processing request.")
 
-            return Message()
+                return Message()
 
-    return wrapper
+        return wrapper
+    return decorator_func
